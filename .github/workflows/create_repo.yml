@@ -20,6 +20,9 @@ on:
 jobs:
   generate-and-push:
     runs-on: ubuntu-latest
+    env:
+      REPO_NAME: ${{ github.event.inputs.project_name | toLowerCase() | replace(' ', '_') }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Checkout scaffold repo
         uses: actions/checkout@v3
@@ -40,18 +43,15 @@ jobs:
             description="${{ github.event.inputs.description }}" \
             python_version_number="${{ github.event.inputs.python_version_number }}"
 
-      - name: Create GitHub repo via API
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          REPO_NAME=$(echo "${{ github.event.inputs.project_name }}" | tr '[:upper:]' '[:lower:]' | tr ' ' '_')
-          curl -X POST -H "Authorization: token $GH_TOKEN" \
-            -d "{\"name\":\"$REPO_NAME\"}" \
-            https://api.github.com/user/repos
+      - name: Create repository
+        uses: actions/create-github-repo@v1
+        with:
+          name: ${{ env.REPO_NAME }}
+          token: ${{ secrets.GH_TOKEN }}
+          private: true
 
       - name: Push scaffold to new repo
         run: |
-          REPO_NAME=$(echo "${{ github.event.inputs.project_name }}" | tr '[:upper:]' '[:lower:]' | tr ' ' '_')
           cd $REPO_NAME
           git init
           git config user.name "${{ github.actor }}"
