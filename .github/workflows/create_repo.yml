@@ -52,7 +52,7 @@ jobs:
       - name: Push scaffold to new repo
         run: |
           REPO_NAME=$(echo "${{ github.event.inputs.project_name }}" | tr '[:upper:]' '[:lower:]' | tr ' ' '_')
-          cd generated/$REPO_NAME
+          cd $REPO_NAME
           git init
           git config user.name "${{ github.actor }}"
           git config user.email "${{ github.actor }}@users.noreply.github.com"
