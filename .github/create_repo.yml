@@ -1,0 +1,64 @@
+name: Create Scaffold Repository
+
+on:
+  workflow_dispatch:
+    inputs:
+      project_name:
+        description: 'Project name'
+        required: true
+      author_name:
+        description: 'Author name'
+        required: true
+      description:
+        description: 'Project description'
+        required: true
+      python_version_number:
+        description: 'Python version'
+        required: true
+        default: '3.10'
+
+jobs:
+  generate-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout scaffold repo
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install Cookiecutter
+        run: pip install cookiecutter
+
+      - name: Generate project from template
+        run: |
+          cookiecutter cookiecutter-templates --no-input \
+            --config-file cookiecutter.json \
+            --output generated \
+            project_name="${{ github.event.inputs.project_name }}" \
+            author_name="${{ github.event.inputs.author_name }}" \
+            description="${{ github.event.inputs.description }}" \
+            python_version_number="${{ github.event.inputs.python_version_number }}"
+
+      - name: Create GitHub repo via API
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          REPO_NAME=$(echo "${{ github.event.inputs.project_name }}" | tr '[:upper:]' '[:lower:]' | tr ' ' '_')
+          curl -X POST -H "Authorization: token $GH_TOKEN" \
+            -d "{\"name\":\"$REPO_NAME\"}" \
+            https://api.github.com/user/repos
+
+      - name: Push scaffold to new repo
+        run: |
+          REPO_NAME=$(echo "${{ github.event.inputs.project_name }}" | tr '[:upper:]' '[:lower:]' | tr ' ' '_')
+          cd generated/$REPO_NAME
+          git init
+          git config user.name "${{ github.actor }}"
+          git config user.email "${{ github.actor }}@users.noreply.github.com"
+          git remote add origin https://github.com/${{ github.repository_owner }}/$REPO_NAME.git
+          git add .
+          git commit -m "Initial commit from scaffold"
+          git push -u origin main
