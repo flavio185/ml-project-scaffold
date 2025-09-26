@@ -47,9 +47,9 @@ jobs:
 
       - name: Create repository
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.REPO_CREATOR_PAT }}
         run: | 
-          gh repo create "$REPO_NAME" --public --description "${{ github.event.inputs.description }}" --confirm
+          gh repo create "$REPO_NAME" --public --description "${{ github.event.inputs.description }}"
 
       - name: Push scaffold to new repo
         run: |
