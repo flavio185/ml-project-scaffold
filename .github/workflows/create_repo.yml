@@ -39,18 +39,17 @@ jobs:
             author_name="${{ github.event.inputs.author_name }}" \
             description="${{ github.event.inputs.description }}" \
             python_version_number="${{ github.event.inputs.python_version_number }}"
-            
+
       - name: Set repository name
         run: |
           REPO_NAME=$(echo "${{ github.event.inputs.project_name }}" | tr '[:upper:]' '[:lower:]' | tr ' ' '_')
           echo "REPO_NAME=${REPO_NAME}" >> $GITHUB_ENV
 
       - name: Create repository
-        uses: actions/create-github-repo@v1
-        with:
-          name: ${{ env.REPO_NAME }}
-          token: ${{ secrets.GH_TOKEN }}
-          private: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: | 
+          gh repo create "$REPO_NAME" --public --description "${{ github.event.inputs.description }}" --confirm
 
       - name: Push scaffold to new repo
         run: |
