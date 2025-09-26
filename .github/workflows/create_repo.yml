@@ -51,12 +51,14 @@ jobs:
         run: |
           echo "$GH_TOKEN" | gh auth login --with-token
           gh auth status
-          
+
       - name: Create repository
         env:
           GH_TOKEN: ${{ secrets.REPO_CREATOR_PAT }}
         run: | 
-          gh repo create "$REPO_NAME" --public --description "${{ github.event.inputs.description }}"
+          gh repo create "$REPO_NAME" --public --description "${{ github.event.inputs.description }}" \
+          -y \
+          --add-readme
 
       - name: Push scaffold to new repo
         run: |
@@ -64,7 +66,8 @@ jobs:
           git init
           git config user.name "${{ github.actor }}"
           git config user.email "${{ github.actor }}@users.noreply.github.com"
-          git remote add origin https://github.com/${{ github.repository_owner }}/$REPO_NAME.git
+          git remote add origin https://x-access-token:${{ secrets.REPO_CREATOR_PAT }}@github.com/${{ github.repository_owner }}/$REPO_NAME.git
           git add .
           git commit -m "Initial commit from scaffold"
+          git branch -M main
           git push -u origin main
