@@ -45,17 +45,12 @@ jobs:
           REPO_NAME=$(echo "${{ github.event.inputs.project_name }}" | tr '[:upper:]' '[:lower:]' | tr ' ' '_')
           echo "REPO_NAME=${REPO_NAME}" >> $GITHUB_ENV
 
-      - name: Authenticate gh
-        env:
-          GH_TOKEN: ${{ secrets.REPO_CREATOR_PAT }}
-        run: |
-          echo "$GH_TOKEN" | gh auth login --with-token
-          gh auth status
 
       - name: Create repository
         env:
           GH_TOKEN: ${{ secrets.REPO_CREATOR_PAT }}
         run: | 
+          gh auth status
           gh repo create "$REPO_NAME" --public --description "${{ github.event.inputs.description }}" \
           -y \
           --add-readme
