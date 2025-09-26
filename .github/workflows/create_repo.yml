@@ -50,10 +50,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.REPO_CREATOR_PAT }}
         run: | 
-          gh auth status
-          gh repo create "$REPO_NAME" --public --description "${{ github.event.inputs.description }}" \
-          -y \
-          --add-readme
+          gh repo create "$REPO_NAME" --public --description "${{ github.event.inputs.description }}"
 
       - name: Push scaffold to new repo
         run: |
