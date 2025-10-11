@@ -56,15 +56,15 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.REPO_CREATOR_PAT }}
         run: |
-          gh variable set AWS_REGION -b"${{ vars.AWS_REGION }}" --repo "${{ github.repository_owner }}/$REPO_NAME"
-          gh variable set AWS_S3_BUCKET -b"${{ vars.AWS_S3_BUCKET }}" --repo "${{ github.repository_owner }}/$REPO_NAME"
-          gh secret set RESOURCE_GROUP -b"${{ secrets.RESOURCE_GROUP }}" --repo "${{ github.repository_owner }}/$REPO_NAME"
-          gh secret set AKS_CLUSTER_NAME -b"${{ secrets.AKS_CLUSTER_NAME }}" --repo "${{ github.repository_owner }}/$REPO_NAME"
-          gh secret set AWS_ACCESS_KEY_ID -b"${{ secrets.AWS_ACCESS_KEY_ID }}" --repo "${{ github.repository_owner }}/$REPO_NAME"
-          gh secret set AWS_SECRET_ACCESS_KEY -b"${{ secrets.AWS_SECRET_ACCESS_KEY }}" --repo "${{ github.repository_owner }}/$REPO_NAME"
-          gh secret set AZURE_CLIENT_ID -b"${{ secrets.AZURE_CLIENT_ID }}" --repo "${{ github.repository_owner }}/$REPO_NAME"
-          gh secret set AZURE_TENANT_ID -b"${{ secrets.AZURE_TENANT_ID }}" --repo "${{ github.repository_owner }}/$REPO_NAME"
-          gh secret set AZURE_SUBSCRIPTION_ID -b"${{ secrets.AZURE_SUBSCRIPTION_ID }}" --repo "${{ github.repository_owner }}/$REPO_NAME"
+          gh variable set AWS_REGION -b "${{ vars.AWS_REGION }}" --repo "${{ github.repository_owner }}/$REPO_NAME"
+          gh variable set AWS_S3_BUCKET -b "${{ vars.AWS_S3_BUCKET }}" --repo "${{ github.repository_owner }}/$REPO_NAME"
+          gh variable set RESOURCE_GROUP -b "${{ vars.RESOURCE_GROUP }}" --repo "${{ github.repository_owner }}/$REPO_NAME"
+          gh variable set AKS_CLUSTER_NAME -b "${{ vars.AKS_CLUSTER_NAME }}" --repo "${{ github.repository_owner }}/$REPO_NAME"
+          gh secret set AWS_ACCESS_KEY_ID -b "${{ secrets.AWS_ACCESS_KEY_ID }}" --repo "${{ github.repository_owner }}/$REPO_NAME"
+          gh secret set AWS_SECRET_ACCESS_KEY -b "${{ secrets.AWS_SECRET_ACCESS_KEY }}" --repo "${{ github.repository_owner }}/$REPO_NAME"
+          gh secret set AZURE_CLIENT_ID -b "${{ secrets.AZURE_CLIENT_ID }}" --repo "${{ github.repository_owner }}/$REPO_NAME"
+          gh secret set AZURE_TENANT_ID -b "${{ secrets.AZURE_TENANT_ID }}" --repo "${{ github.repository_owner }}/$REPO_NAME"
+          gh secret set AZURE_SUBSCRIPTION_ID -b "${{ secrets.AZURE_SUBSCRIPTION_ID }}" --repo "${{ github.repository_owner }}/$REPO_NAME"
 
       - name: Push scaffold to new repo
         run: |
