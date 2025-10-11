@@ -51,6 +51,16 @@ jobs:
           GH_TOKEN: ${{ secrets.REPO_CREATOR_PAT }}
         run: | 
           gh repo create "$REPO_NAME" --public --description "${{ github.event.inputs.description }}"
+      
+      - name: Push secrets
+        env:
+          GH_TOKEN: ${{ secrets.REPO_CREATOR_PAT }}
+        run: |
+          gh secret set AWS_ACCESS_KEY_ID -b"${{ secrets.AWS_ACCESS_KEY_ID }}" --repo "${{ github.repository_owner }}/$REPO_NAME"
+          gh secret set AWS_SECRET_ACCESS_KEY -b"${{ secrets.AWS_SECRET_ACCESS_KEY }}" --repo "${{ github.repository_owner }}/$REPO_NAME"
+          gh secret set AZURE_CLIENT_ID -b"${{ secrets.AZURE_CLIENT_ID }}" --repo "${{ github.repository_owner }}/$REPO_NAME"
+          gh secret set AZURE_TENANT_ID -b"${{ secrets.AZURE_TENANT_ID }}" --repo "${{ github.repository_owner }}/$REPO_NAME"
+          gh secret set AZURE_SUBSCRIPTION_ID -b"${{ secrets.AZURE_SUBSCRIPTION_ID }}" --repo "${{ github.repository_owner }}/$REPO_NAME"
 
       - name: Push scaffold to new repo
         run: |
@@ -63,3 +73,5 @@ jobs:
           git commit -m "Initial commit from scaffold"
           git branch -M main
           git push -u origin main
+        
+      
