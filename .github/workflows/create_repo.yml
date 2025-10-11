@@ -17,10 +17,7 @@ on:
         required: true
         default: '3.10'
 
-permissions:
-  id-token: write
-  contents: read
-  
+
 jobs:
   generate-and-push:
     runs-on: ubuntu-latest
@@ -66,9 +63,7 @@ jobs:
           gh variable set AKS_CLUSTER_NAME -b "${{ vars.AKS_CLUSTER_NAME }}" --repo "${{ github.repository_owner }}/$REPO_NAME"
           gh secret set AWS_ACCESS_KEY_ID -b "${{ secrets.AWS_ACCESS_KEY_ID }}" --repo "${{ github.repository_owner }}/$REPO_NAME"
           gh secret set AWS_SECRET_ACCESS_KEY -b "${{ secrets.AWS_SECRET_ACCESS_KEY }}" --repo "${{ github.repository_owner }}/$REPO_NAME"
-          gh secret set AZURE_CLIENT_ID -b "${{ secrets.AZURE_CLIENT_ID }}" --repo "${{ github.repository_owner }}/$REPO_NAME"
-          gh secret set AZURE_TENANT_ID -b "${{ secrets.AZURE_TENANT_ID }}" --repo "${{ github.repository_owner }}/$REPO_NAME"
-          gh secret set AZURE_SUBSCRIPTION_ID -b "${{ secrets.AZURE_SUBSCRIPTION_ID }}" --repo "${{ github.repository_owner }}/$REPO_NAME"
+          gh secret set AZURE_CREDENTIALS -b "${{ secrets.AZURE_CREDENTIALS }}" --repo "${{ github.repository_owner }}/$REPO_NAME"
 
       - name: Push scaffold to new repo
         run: |
@@ -85,9 +80,8 @@ jobs:
       - name: Azure login
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
 
       - name: Azure CLI script
         uses: azure/cli@v2
@@ -95,14 +89,3 @@ jobs:
           azcliversion: latest
           inlineScript: |
             az account show
-            az ad app federated-credential create \
-              --id ${{ secrets.AZURE_CLIENT_ID }} \
-              --parameters '{
-                "name": "github-actions-federated-credential",
-                "issuer": "https://token.actions.githubusercontent.com",
-                "subject": "repo:'${{ github.repository_owner }}/$REPO_NAME':ref:refs/heads/main",
-                "description": "GitHub Actions OIDC connection",
-                "audiences": [
-                  "api://AzureADTokenExchange"
-                ]
-              }'
