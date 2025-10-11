@@ -14,7 +14,7 @@ PYTHON_INTERPRETER = python
 ## Install Python dependencies
 .PHONY: requirements
 requirements:
-	pip install -e .
+	uv sync
 	
 
 
@@ -29,21 +29,21 @@ clean:
 ## Lint using ruff (use `make format` to do formatting)
 .PHONY: lint
 lint:
-	ruff format --check
-	ruff check
+	uv run ruff format --check
+	uv run ruff check
 
 ## Format source code with ruff
 .PHONY: format
 format:
-	ruff check --fix
-	ruff format
+	uv run ruff check --fix
+	uv run ruff format
 
 
 
-## Run tests
+## Run tests with pytest
 .PHONY: test
 test:
-	python -m pytest tests
+	uv run pytest tests
 
 
 ## Set up Python interpreter environment

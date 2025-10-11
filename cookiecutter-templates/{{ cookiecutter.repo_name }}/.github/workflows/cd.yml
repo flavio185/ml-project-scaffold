@@ -1,0 +1,26 @@
+name: Deploy to AKS
+
+on:
+  workflow_
+# Permissões necessárias para a autenticação OIDC
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      #call reusable workflow that sits on another repository to deploy to AKS
+      - name: Deploy to AKS
+        uses: flavio185/reusable-workflow/.github/workflows/deploy-to-k8s@main
+        secrets: inherit
+        with:
+          MIN_REPLICAS: 1
+          MAX_REPLICAS: 5
+          ENTRY_POINT: "uv run {{ cookiecutter.repo_name }}/run.py"
+          NAMESPACE: default

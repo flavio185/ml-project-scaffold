@@ -56,6 +56,10 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.REPO_CREATOR_PAT }}
         run: |
+          gh vars set AWS_REGION -b"${{ vars.AWS_REGION }}" --repo "${{ github.repository_owner }}/$REPO_NAME"
+          gh vars set AWS_S3_BUCKET -b"${{ vars.AWS_S3_BUCKET }}" --repo "${{ github.repository_owner }}/$REPO_NAME"
+          gh secret set RESOURCE_GROUP -b"${{ secrets.RESOURCE_GROUP }}" --repo "${{ github.repository_owner }}/$REPO_NAME"
+          gh secret set AKS_CLUSTER_NAME -b"${{ secrets.AKS_CLUSTER_NAME }}" --repo "${{ github.repository_owner }}/$REPO_NAME"
           gh secret set AWS_ACCESS_KEY_ID -b"${{ secrets.AWS_ACCESS_KEY_ID }}" --repo "${{ github.repository_owner }}/$REPO_NAME"
           gh secret set AWS_SECRET_ACCESS_KEY -b"${{ secrets.AWS_SECRET_ACCESS_KEY }}" --repo "${{ github.repository_owner }}/$REPO_NAME"
           gh secret set AZURE_CLIENT_ID -b"${{ secrets.AZURE_CLIENT_ID }}" --repo "${{ github.repository_owner }}/$REPO_NAME"
@@ -67,11 +71,34 @@ jobs:
           cd $REPO_NAME
           git init
           git config user.name "${{ github.actor }}"
-          git config user.email "${{ github.actor }}@users.noreply.github.com"
+          git config user.email "${{ github.actor }}@gmail.com"
           git remote add origin https://x-access-token:${{ secrets.REPO_CREATOR_PAT }}@github.com/${{ github.repository_owner }}/$REPO_NAME.git
           git add .
           git commit -m "Initial commit from scaffold"
           git branch -M main
           git push -u origin main
-        
       
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Azure CLI script
+        uses: azure/cli@v2
+        with:
+          azcliversion: latest
+          inlineScript: |
+            az account show
+            az ad app federated-credential create \
+              --id ${{ secrets.AZURE_CLIENT_ID }} \
+              --parameters '{
+                "name": "github-actions-federated-credential",
+                "issuer": "https://token.actions.githubusercontent.com",
+                "subject": "repo:'${{ github.repository_owner }}/$REPO_NAME':ref:refs/heads/main",
+                "description": "GitHub Actions OIDC connection",
+                "audiences": [
+                  "api://AzureADTokenExchange"
+                ]
+              }'
