@@ -6,8 +6,6 @@ on:
 jobs:
   set_vars:
     runs-on: ubuntu-latest
-    outputs:
-      AWS_REGION: ${{ steps.set_vars.outputs.AWS_REGION }}
     steps:
       - name: Set VARS
         id: set_vars
