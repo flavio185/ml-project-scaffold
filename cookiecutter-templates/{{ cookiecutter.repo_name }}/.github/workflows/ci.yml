@@ -1,11 +1,11 @@
 name: CI
 on:
   push:
-    branches:
-      - main
+    branches: [main, develop, feature/*, hotfix/*, release/*]
+  workflow_dispatch:
 
 jobs:
-  build:
+  validate:
     runs-on: ubuntu-latest
 
     steps:
@@ -25,7 +25,8 @@ jobs:
         run: make test
   
   set_vars:
-    needs: build
+    if: github.ref == 'refs/heads/main'
+    needs: validate
     runs-on: ubuntu-latest
     outputs:
       AWS_REGION: ${{ steps.set_vars.outputs.AWS_REGION }}
@@ -39,7 +40,8 @@ jobs:
           echo "DEBUG AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}"
   
   build-and-upload-package:
-    needs: [build, set_vars]
+    if: github.ref == 'refs/heads/main'
+    needs: [validate, set_vars]
     runs-on: ubuntu-latest
     outputs:
       PACKAGE_NAME: ${{ steps.package.outputs.PACKAGE_NAME }}
@@ -108,6 +110,7 @@ jobs:
           echo "Successfully uploaded $PACKAGE_NAME to s3://${{ needs.set_vars.outputs.AWS_S3_BUCKET }}/raw_packages/"
 
   call-cd:
+    if: github.ref == 'refs/heads/main'
     needs: [build-and-upload-package]
     uses: ./.github/workflows/cd.yml
     with:
@@ -118,7 +121,8 @@ jobs:
       AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
 
   summary:
-    needs: [build, build-and-upload-package, call-cd]
+    if: github.ref == 'refs/heads/main'
+    needs: [validate, build-and-upload-package, call-cd]
     runs-on: ubuntu-latest
     steps:
       - name: Display Summary
