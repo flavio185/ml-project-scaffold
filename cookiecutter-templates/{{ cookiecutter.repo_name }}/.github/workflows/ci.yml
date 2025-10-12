@@ -29,93 +29,93 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       AWS_REGION: ${{ steps.set_vars.outputs.AWS_REGION }}
+      AWS_S3_BUCKET: ${{ steps.set_vars.outputs.AWS_S3_BUCKET }}
     steps:
       - name: Set AWS_VARS
         id: set_vars
         run: |
           echo "AWS_REGION=${{ vars.AWS_REGION }}" >> $GITHUB_OUTPUT
           echo "AWS_S3_BUCKET=${{ vars.AWS_S3_BUCKET }}" >> $GITHUB_OUTPUT
+          echo "DEBUG AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}"
   
-build-and-upload-package:
-  runs-on: ubuntu-latest
-  steps:
-    - name: Checkout source code 
-      uses: actions/checkout@v4
+  build-and-upload-package:
+    needs: [build, set_vars]
+    runs-on: ubuntu-latest
+    outputs:
+      PACKAGE_NAME: ${{ steps.package.outputs.PACKAGE_NAME }}
+    steps:
+      - name: Checkout source code 
+        uses: actions/checkout@v4
 
-    - name: Install yq, gettext-base, and zip
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y gettext-base yq zip
+      - name: Install gettext-base, and zip
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gettext-base zip
 
-    - name: Prepare base manifest with global variables
-      id: prepare-manifest
-      env:
-        AWS_S3_BUCKET: ${{ inputs.AWS_S3_BUCKET }}
-        REPO_NAME: ${{ github.event.repository.name }}
-        COMMIT_SHA: ${{ github.sha }}
-      run: |
-        curl -o ray-job-template.yml https://raw.githubusercontent.com/flavio185/reusable-workflows/refs/heads/main/Ray/ray-job.yml
-        envsubst < ray-job-template.yml > ray-job-interpolated.yaml
-        echo "Base manifest 'ray-job-interpolated.yaml' created."
+      - name: Generate all job files
+        id: generate-files
+        env:
+          AWS_S3_BUCKET: ${{ inputs.AWS_S3_BUCKET }}
+          REPO_NAME: ${{ github.event.repository.name }}
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          curl -o ray-job-template.yml https://raw.githubusercontent.com/flavio185/reusable-workflows/refs/heads/main/Ray/ray-job.yml
+          # Cria um diretório para os manifestos gerados
+          mkdir -p generated-manifests
+          config_file="conf/job_config.json"
+          jobs_json=$(jq '.job' $config_file)
+          num_jobs=$(echo "$jobs_json" | jq 'length')
+          echo "Found $num_jobs jobs in $config_file"
 
-    - name: Generate all job files
-      id: generate-files
-      run: |
-        # Cria um diretório para os manifestos gerados
-        mkdir -p generated-manifests
+          for i in $(seq 0 $(($num_jobs - 1))); do
+              job_config=$(echo "$jobs_json" | jq ".[$i]")
 
-        jobs_json=$(yq -o=json '.job' ${{ inputs.config_file }})
-        num_jobs=$(echo "$jobs_json" | yq 'length')
-        echo "Found $num_jobs jobs in ${{ inputs.config_file }}"
+              export JOB_NAME=$(echo "$job_config" | jq -r '.name')
+              export MIN_REPLICAS=$(echo "$job_config" | jq -r '.config.min_replicas')
+              export MAX_REPLICAS=$(echo "$job_config" | jq -r '.config.max_replicas')
+              export ENTRY_POINT=$(echo "$job_config" | jq -r '.config.entry_point')
+              export NAMESPACE=$(echo "$job_config" | jq -r '.config.namespace')
 
-        for i in $(seq 0 $(($num_jobs - 1))); do
-          job_config=$(echo "$jobs_json" | yq ".[$i]")
+              echo "Processing job: $JOB_NAME"
+
+              envsubst < ray-job-template.yml > generated-manifests/job_${JOB_NAME}.yml
+
+              echo "Generated generated-manifests/job_${JOB_NAME}.yml"
+          done
+
+      - name: Package repository and manifests
+        id: package
+        run: |
+          # Define o nome do pacote zip
+          PACKAGE_NAME="${{ github.event.repository.name }}-${{ github.sha }}.zip"
+
+          zip -r $PACKAGE_NAME . -x ".git/*"
           
-          job_name=$(echo "$job_config" | yq -r '.name')
-          min_replicas=$(echo "$job_config" | yq -r '.config.min_replicas')
-          max_replicas=$(echo "$job_config" | yq -r '.config.max_replicas')
-          entry_point=$(echo "$job_config" | yq -r '.config.entry_point')
-          namespace=$(echo "$job_config" | yq -r '.config.namespace')
+          echo "PACKAGE_NAME=${PACKAGE_NAME}" >> $GITHUB_OUTPUT
+          echo "Package created: $PACKAGE_NAME"
 
-          echo "Processing job: $job_name"
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ needs.set_vars.outputs.AWS_REGION }}
 
-          yq eval "
-            .metadata.namespace = \"$namespace\" |
-            .spec.entrypoint = \"$entry_point\" |
-            .spec.rayClusterSpec.workerGroupSpecs[0].minReplicas = $min_replicas |
-            .spec.rayClusterSpec.workerGroupSpecs[0].maxReplicas = $max_replicas
-          " ray-job-interpolated.yaml > generated-manifests/job_${job_name}.yml
-
-          echo "Generated generated-manifests/job_${job_name}.yml"
-        done
-
-    - name: Package repository and manifests
-      id: package
-      run: |
-        # Define o nome do pacote zip
-        PACKAGE_NAME="${{ github.event.repository.name }}-${{ github.sha }}.zip"
-
-        zip -r $PACKAGE_NAME . -x ".git/*"
-        
-        echo "PACKAGE_NAME=${PACKAGE_NAME}" >> $GITHUB_OUTPUT
-        echo "Package created: $PACKAGE_NAME"
-
-    - name: Configure AWS Credentials
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ inputs.AWS_REGION }}
-
-    - name: Upload Package to S3
-      run: |
-        PACKAGE_NAME=${{ steps.package.outputs.PACKAGE_NAME }}
-        aws s3 cp $PACKAGE_NAME s3://${{ inputs.AWS_S3_BUCKET }}/raw_packages/$PACKAGE_NAME
-        echo "Successfully uploaded $PACKAGE_NAME to s3://${{ inputs.AWS_S3_BUCKET }}/raw_packages/"
+      - name: Upload Package to S3
+        run: |
+          PACKAGE_NAME=${{ steps.package.outputs.PACKAGE_NAME }}
+          aws s3 cp $PACKAGE_NAME s3://${{ needs.set_vars.outputs.AWS_S3_BUCKET }}/raw_packages/$PACKAGE_NAME
+          echo "Successfully uploaded $PACKAGE_NAME to s3://${{ needs.set_vars.outputs.AWS_S3_BUCKET }}/raw_packages/"
 
   call-cd:
-    needs: build-and-upload-package
+    needs: [build-and-upload-package]
     uses: ./.github/workflows/cd.yml
+    with:
+      package_name: ${{ needs.build-and-upload-package.outputs.PACKAGE_NAME }}
+    secrets:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
 
   summary:
     needs: [build, build-and-upload-package, call-cd]
