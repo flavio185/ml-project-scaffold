@@ -52,7 +52,7 @@ build-and-upload-package:
       env:
         AWS_S3_BUCKET: ${{ inputs.AWS_S3_BUCKET }}
         REPO_NAME: ${{ github.event.repository.name }}
-        COMMIT_SHA: $(echo ${{ github.sha }} | cut -c1-7)
+        COMMIT_SHA: ${{ github.sha }}
       run: |
         curl -o ray-job-template.yml https://raw.githubusercontent.com/flavio185/reusable-workflows/refs/heads/main/Ray/ray-job.yml
         envsubst < ray-job-template.yml > ray-job-interpolated.yaml
