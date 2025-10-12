@@ -1,39 +1,33 @@
 name: Deploy to AKS
 
 on:
-  workflow_dispatch:
-    inputs:
-      MIN_REPLICAS:
-        description: 'Minimum number of replicas'
-        required: false
-        default: '1'
-      MAX_REPLICAS:
-        description: 'Maximum number of replicas'
-        required: false
-        default: '5'
-      ENTRY_POINT:
-        description: 'Entry point command to run the application'
-        required: false
-        default: 'uv run {{ cookiecutter.module_name }}/run.py'
-      NAMESPACE:
-        description: 'Kubernetes namespace to deploy to'
-        required: false
-        default: 'default'
+  workflow_call:
 
 jobs:
+  set_vars:
+    runs-on: ubuntu-latest
+    outputs:
+      AWS_REGION: ${{ steps.set_vars.outputs.AWS_REGION }}
+    steps:
+      - name: Set VARS
+        id: set_vars
+        run: |
+          echo "AWS_REGION=${{ vars.AWS_REGION }}" >> $GITHUB_OUTPUT
+          echo "AWS_S3_BUCKET=${{ vars.AWS_S3_BUCKET }}" >> $GITHUB_OUTPUT
+          echo "RESOURCE_GROUP=${{ vars.RESOURCE_GROUP }}" >> $GITHUB_OUTPUT
+          echo "AKS_CLUSTER_NAME=${{ vars.AKS_CLUSTER_NAME }}" >> $GITHUB_OUTPUT
+
   deploy:
     runs-on: ubuntu-latest
-    
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      
-      #call reusable workflow that sits on another repository to deploy to AKS
       - name: Deploy to AKS
         uses: flavio185/reusable-workflows/.github/workflows/deploy-to-k8s@main
         secrets: inherit
         with:
-          MIN_REPLICAS: 1
-          MAX_REPLICAS: 5
-          ENTRY_POINT: "uv run {{ cookiecutter.module_name }}/run.py"
-          NAMESPACE: default
+          config_path: generated-manifests
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ vars.AWS_REGION }}
+          RESOURCE_GROUP: ${{ vars.RESOURCE_GROUP }}
+          AKS_CLUSTER_NAME: ${{ vars.AKS_CLUSTER_NAME }}
+          KUBE_NAMESPACE: 'app_ns'
