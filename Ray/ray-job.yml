@@ -1,0 +1,59 @@
+apiVersion: ray.io/v1
+kind: RayJob
+metadata:
+  name: ${REPO_NAME}-${COMMIT_SHA}-${JOB_NAME}
+  namespace: ${NAMESPACE}
+spec:
+  entrypoint: ${ENTRYPOINT}
+  runtimeEnvYAML: |
+      working_dir: s3://${AWS_S3_BUCKET}/raw_packages/${REPO_NAME}-${COMMIT_SHA}.zip
+      pip:
+       - smart-open
+       - boto3
+      env_vars:
+        MLFLOW_TRACKING_URI: http://nginx.mlflow-ns.svc.cluster.local
+  # shutdownAfterJobFinishes specifies whether the RayCluster should be deleted after the RayJob finishes. Default is false.
+  shutdownAfterJobFinishes: true
+
+  # ttlSecondsAfterFinished specifies the number of seconds after which the RayCluster will be deleted after the RayJob finishes.
+  ttlSecondsAfterFinished: 80
+  rayClusterSpec:
+    rayVersion: "2.46.0"
+    headGroupSpec:
+      serviceType: ClusterIP
+      # The `rayStartParams` are used to configure the `ray start` command.
+      # See https://github.com/ray-project/kuberay/blob/master/docs/guidance/rayStartParams.md for the default settings of `rayStartParams` in KubeRay.
+      # See https://docs.ray.io/en/latest/cluster/cli.html#ray-start for all available options in `rayStartParams`.
+      rayStartParams: {}
+      #pod template
+      template:
+        spec:
+          containers:
+          - name: ray-head
+            image: rayproject/ray:2.46.0
+            resources:
+              limits:
+                cpu: "1"
+              requests:
+                cpu: "200m"
+            envFrom:
+            - secretRef:
+                name: aws-credentials
+    workerGroupSpecs:
+    - groupName: workers
+      minReplicas: ${MIN_REPLICAS}
+      maxReplicas: ${MAX_REPLICAS}
+      rayStartParams: {}
+      template:
+        spec:
+          containers:
+          - name: ray-worker
+            image: rayproject/ray:2.46.0
+            resources:
+              limits:
+                cpu: "1"
+              requests:
+                cpu: "200m"
+            envFrom:
+            - secretRef:
+                name: aws-credentials

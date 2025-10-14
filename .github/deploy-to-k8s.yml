@@ -1,0 +1,82 @@
+name: Deploy RayJob for Training on AKS
+
+on:
+  workflow_call:
+    secrets:
+      AWS_ACCESS_KEY_ID:
+        required: true
+      AWS_SECRET_ACCESS_KEY:
+        required: true
+      AZURE_CREDENTIALS:
+        required: true
+    inputs:
+      AWS_REGION:
+        required: true
+        type: string
+      AWS_S3_BUCKET:
+        required: true
+        type: string
+      RESOURCE_GROUP:
+        required: true
+        type: string
+      AKS_CLUSTER_NAME:
+        required: true
+        type: string
+      package_name:
+        required: true
+        type: string
+
+jobs:
+  deploy-rayjob:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up environment variables
+        run: |
+          echo "RESOURCE_GROUP=${{ inputs.RESOURCE_GROUP }}" >> $GITHUB_ENV
+          echo "AKS_CLUSTER_NAME=${{ inputs.AKS_CLUSTER_NAME }}" >> $GITHUB_ENV
+
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+  
+      - name: Set AKS context
+        uses: azure/aks-set-context@v3
+        with:
+          # CORRIGIDO: Usando o contexto 'env' para acessar as variáveis
+          resource-group: ${{ env.RESOURCE_GROUP }}
+          cluster-name: ${{ env.AKS_CLUSTER_NAME }}
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v3
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ inputs.AWS_REGION }}
+
+      - name: Download and Unpack Artifacts
+        run: |
+          sudo apt-get update && sudo apt-get install -y unzip
+          aws s3 cp s3://${{ inputs.AWS_S3_BUCKET }}/raw_packages/${{ inputs.package_name }} ./
+          unzip ${{ inputs.package_name }} -d ./package
+          echo "Package content:"
+          ls -R ./package
+
+      - name: Deploy Manifests to AKS
+        run: |
+          # CORRIGIDO: Especifica o caminho correto para os manifestos
+          MANIFEST_DIR="./package/generated-manifests"
+          if [ -d "$MANIFEST_DIR" ] && [ "$(ls -A $MANIFEST_DIR/*.yml 2>/dev/null)" ]; then
+            echo "Found manifests in $MANIFEST_DIR. Applying them..."
+            for f in $MANIFEST_DIR/*.yml; do
+              echo "Applying manifest: $f"
+              kubectl apply -f "$f"
+            done
+          else
+            echo "Warning: No .yml files found in $MANIFEST_DIR or the directory does not exist."
+            # Você pode optar por falhar o workflow aqui se os manifestos forem obrigatórios
+            # exit 1
+          fi

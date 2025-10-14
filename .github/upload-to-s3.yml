@@ -1,0 +1,46 @@
+name: Create Zip and Upload to S3
+
+on:
+  workflow_call:
+    secrets:
+      AWS_ACCESS_KEY_ID:
+        required: true
+      AWS_SECRET_ACCESS_KEY:
+        required: true
+    inputs:
+      AWS_REGION:
+        required: true
+        type: string
+      AWS_S3_BUCKET:
+        required: true
+        type: string
+jobs:
+  build-and-upload:
+    runs-on: ubuntu-latest
+    steps:
+      # 1. Baixa o código do seu repositório
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: get repository name and commit
+        id: repo-info
+        run: |
+          echo "REPO_NAME=$(basename -s .git `git config --get remote.origin.url`)" >> $GITHUB_ENV
+          echo "COMMIT_SHA=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+
+      # 2. zip all the repo
+      - name: Create Zip File
+        run: zip -r $REPO_NAME-$COMMIT_SHA.zip .
+
+      # 3. Configura as credenciais da AWS de forma segura
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ inputs.AWS_REGION }}
+
+      # 4. Faz o upload do arquivo ZIP para o S3
+      - name: Upload to S3
+        run: |
+          aws s3 cp $REPO_NAME-$COMMIT_SHA.zip s3://${{ inputs.AWS_S3_BUCKET }}/raw_packages/$REPO_NAME-$COMMIT_SHA.zip

@@ -38,7 +38,7 @@ jobs:
 
   deploy:
     needs: set_vars
-    uses: flavio185/reusable-workflows/.github/workflows/deploy-to-k8s.yml@main
+    uses: flavio185/ml-project-scaffold/.github/workflows/deploy-to-k8s.yml@main
     secrets:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
