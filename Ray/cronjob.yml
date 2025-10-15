@@ -18,6 +18,8 @@ spec:
     spec:
       template:
         spec:
+          # This service account needs permission to create RayJobs
+          serviceAccountName: rayjob-creator-sa
           restartPolicy: OnFailure
           containers:
           - name: rayjob-submitter
