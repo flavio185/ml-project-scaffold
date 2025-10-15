@@ -55,3 +55,4 @@
 
 --------
 
+In the conf directory there is a job_config.json file where you can define your jobs and their parameters.
