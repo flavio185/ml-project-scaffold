@@ -6,7 +6,8 @@
         "min_replicas": 1,
         "max_replicas": 5,
         "entry_point": "uv run {{ cookiecutter.module_name }}/run.py",
-        "namespace": "app-ns"
+        "namespace": "app-ns",
+        "schedule": ""
       }
     }
   ]

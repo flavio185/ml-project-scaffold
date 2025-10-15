@@ -5,10 +5,10 @@ metadata:
   name: ${REPO_NAME}-cronjob-${PROJECT_VERSION_NAME}-${JOB_NAME}
   # The namespace where
   # Should be in the same namespace as your Ray Operator
-  namespace: ray-system 
+  namespace: ${NAMESPACE}
 spec:
   # This is the cron schedule. "0 2 * * *" means "at 2:00 a.m. every day".
-  schedule: ${SCHEDULE}
+  schedule: "${SCHEDULE}"
   
   # If a job takes too long, this will prevent multiple from running at once
   concurrencyPolicy: Forbid 
