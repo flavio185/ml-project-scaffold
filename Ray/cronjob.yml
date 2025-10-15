@@ -2,7 +2,7 @@ apiVersion: batch/v1
 kind: CronJob
 metadata:
   # The name of your scheduled job runner
-  name: ${REPO_NAME}-cronjob-${PROJECT_VERSION_NAME}-${JOB_NAME}
+  name: ${REPO_NAME}-cronjob-${PROJECT_VERSION}-${JOB_NAME}
   # The namespace where
   # Should be in the same namespace as your Ray Operator
   namespace: ${NAMESPACE}

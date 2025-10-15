@@ -1,12 +1,12 @@
 apiVersion: ray.io/v1
 kind: RayJob
 metadata:
-  name: ${REPO_NAME}-${PROJECT_VERSION_NAME}-${JOB_NAME}
+  name: ${REPO_NAME}-${PROJECT_VERSION}-${JOB_NAME}
   namespace: ${NAMESPACE}
 spec:
   entrypoint: ${ENTRYPOINT}
   runtimeEnvYAML: |
-      working_dir: s3://${AWS_S3_BUCKET}/raw_packages/${REPO_NAME}-${PROJECT_VERSION_NAME}.zip
+      working_dir: s3://${AWS_S3_BUCKET}/raw_packages/${REPO_NAME}-${PROJECT_VERSION}.zip
       pip:
        - smart-open
        - boto3
