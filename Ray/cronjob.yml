@@ -1,0 +1,33 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  # The name of your scheduled job runner
+  name: daily-training-rayjob-schedule
+  # Should be in the same namespace as your Ray Operator
+  namespace: ray-system 
+spec:
+  # This is the cron schedule. "0 2 * * *" means "at 2:00 a.m. every day".
+  schedule: ${SCHEDULE}
+  
+  # If a job takes too long, this will prevent multiple from running at once
+  concurrencyPolicy: Forbid 
+
+  # Defines the Job that will be created on schedule
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          # This service account needs permission to create RayJobs
+          serviceAccountName: ray-operator
+          restartPolicy: OnFailure
+          containers:
+          - name: rayjob-submitter
+            # Using a kubectl image is a simple way to do this
+            image: bitnami/kubectl:latest
+            command:
+            - "/bin/sh"
+            - "-c"
+            - |
+              # This is the RayJob manifest that will be applied.
+              # It is embedded here as a multi-line string.
+              cat <<EOF | kubectl apply -f -

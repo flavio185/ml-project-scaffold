@@ -89,3 +89,17 @@ jobs:
           azcliversion: latest
           inlineScript: |
             az account show
+
+  summary:
+    needs: generate-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Display Summary
+        run: |
+          echo "## Repository Creation Summary"
+          echo ""
+          echo "- Repository Name: "${{ github.repository_owner }}/$REPO_NAME}""
+          echo "- Created by: ${{ github.actor }}"
+          echo "- Description: ${{ github.event.inputs.description }}"
+          echo ""
+          echo "The repository has been created successfully with the initial scaffold."

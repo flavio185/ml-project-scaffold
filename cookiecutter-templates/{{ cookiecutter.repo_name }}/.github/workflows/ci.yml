@@ -61,6 +61,7 @@ jobs:
         id: generate-files
         run: |
           curl -o ray-job-template.yml https://raw.githubusercontent.com/flavio185/ml-project-scaffold/refs/heads/main/Ray/ray-job.yml
+          curl -o cronjob-template.yml https://raw.githubusercontent.com/flavio185/ml-project-scaffold/refs/heads/main/Ray/cronjob.yml
           # Cria um diretório para os manifestos gerados
           mkdir -p generated-manifests
           config_file="conf/job_config.json"
@@ -76,14 +77,23 @@ jobs:
               export MAX_REPLICAS=$(echo "$job_config" | jq -r '.config.max_replicas')
               export ENTRYPOINT=$(echo "$job_config" | jq -r '.config.entrypoint')
               export NAMESPACE=$(echo "$job_config" | jq -r '.config.namespace')
-
+              export SCHEDULE=$(echo "$job_config" | jq -r '.config.cronjob // empty')
               echo "Processing job: $JOB_NAME"
 
               envsubst < ray-job-template.yml > generated-manifests/job_${JOB_NAME}.yml
-
               echo "Generated generated-manifests/job_${JOB_NAME}.yml"
-          done
 
+              if [ -n "$SCHEDULE" ]; then
+                echo "Generating cronjob for $JOB_NAME"
+                envsubst < cronjob-template.yml > generated-manifests/cronjob_${JOB_NAME}.yml
+                while IFS= read -r line; do
+                  echo "              $line" >> "generated-manifests/cronjob_${JOB_NAME}.yml"
+                done < "generated-manifests/job_${JOB_NAME}.yml"
+                echo "              EOF" >> "generated-manifests/cronjob_${JOB_NAME}.yml"
+                echo "Generated generated-manifests/cronjob_${JOB_NAME}.yml"
+              fi
+          done
+      
       - name: Package repository and manifests
         id: package
         run: |

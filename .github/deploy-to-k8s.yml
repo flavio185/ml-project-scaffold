@@ -43,7 +43,6 @@ jobs:
       - name: Set AKS context
         uses: azure/aks-set-context@v3
         with:
-          # CORRIGIDO: Usando o contexto 'env' para acessar as variáveis
           resource-group: ${{ env.RESOURCE_GROUP }}
           cluster-name: ${{ env.AKS_CLUSTER_NAME }}
 
@@ -67,7 +66,6 @@ jobs:
 
       - name: Deploy Manifests to AKS
         run: |
-          # CORRIGIDO: Especifica o caminho correto para os manifestos
           MANIFEST_DIR="./package/generated-manifests"
           if [ -d "$MANIFEST_DIR" ] && [ "$(ls -A $MANIFEST_DIR/*.yml 2>/dev/null)" ]; then
             echo "Found manifests in $MANIFEST_DIR. Applying them..."
