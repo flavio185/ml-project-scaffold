@@ -15,21 +15,24 @@ A arquitetura é construída sobre um *stack* de código aberto e *cloud-native*
 | **Inferência Online** | Servidor de modelos escalável e Serverless. | **KServe** (com **Knative** e **Istio**) |
 | **Gerenciamento de Modelos** | Rastreamento de experimentos, registro e versionamento de modelos. | **MLflow** |
 | **Backend MLflow** | Banco de dados para *tracking* de metadados. | **PostgreSQL** |
-| **Artifact Store** | Armazenamento de modelos (artefatos). | **Minio** (compatível com S3) |
-| **Data Lake** | Armazenamento de dados de treinamento. | **S3** (Azure Blob Storage compatível) |
+| **Artifact Store** | Armazenamento de modelos (artefatos). | **Minio**  |
+| **Data Lake** | Armazenamento de dados de treinamento. | **S3**  |
 | **CI/CD** | Automação dos pipelines de treinamento e deployment. | **GitHub Actions** |
-| **Observabilidade** | Logs, Métricas e Dashboards. | **Prometheus**, **Grafana**, **Loki**, **Ray Log Offloader** |
+| **Observabilidade** | Logs, Métricas e Dashboards. | **Prometheus**, **Grafana**, **Loki** |
 
 ### Fluxo Arquitetural Chave:
 
 1.  **Treinamento Distribuído:** Uma **GitHub Action** é acionada, submetendo o job de treinamento para um cluster **Ray** efêmero no AKS. O Ray executa pré-processamento e treinamento lendo os dados diretamente do **S3**.
 2.  **Model Management:** Ao final do treinamento, o modelo é salvo no **Minio** (via MLflow) e os metadados da execução são registrados no **PostgreSQL** (via MLflow).
-3.  **Data Lineage Leve:** Para garantir a rastreabilidade sem inflacionar o MLflow, **apenas os metadados dos dados de treinamento (local, nome, versão)** são logados no MLflow, enquanto os dados brutos permanecem no S3.
+3.  **Data Lineage:** Para garantir a rastreabilidade sem inflacionar o MLflow, **apenas os metadados dos dados de treinamento (local, nome, versão)** são logados no MLflow, enquanto os dados brutos permanecem no S3.
 4.  **Inferência Serverless:** Outra **GitHub Action** implanta o modelo no **KServe**. O KServe, via **Knative**, habilita o *auto-scaling* e o *scale-to-zero*, expondo o serviço através do **Istio**.
+5.  **Inferência Batch:** Jobs de inferência em lote podem ser executados no Ray, lendo dados do S3 e salvando resultados de volta no S3.
 
 ## 3. Explicação sobre o Case Desenvolvido (Plano de Implementação)
 
 O *scaffold* oferece uma estrutura de código e IaC (Infrastructure as Code) para garantir que novos projetos herdem automaticamente as melhores práticas de MLOps.
+
+Foi desenvolvido um fluxo de implantação para o projeto [ml-default-payment-project](https://github.com/flavio185/ml-default-payment-project.git). O projeto foi criado utilizando o workflow **Create Scaffold Repository** do GitHub Actions.
 
 ### A. Treinamento e Pré-processamento com Ray
 * **Execução via GitHub Actions:** O fluxo de CI/CD utiliza GitHub Actions para encapsular o código de treinamento em uma imagem e submeter um **RayJob** no Kubernetes, facilitando a execução de treinamentos distribuídos e *hyperparameter tuning* sem a necessidade de gerenciar o ciclo de vida do cluster Ray manualmente.
@@ -41,9 +44,9 @@ O *scaffold* oferece uma estrutura de código e IaC (Infrastructure as Code) par
 * **Roteamento:** **Istio** é usado para gerenciar o tráfego de entrada (InferenceService Ingress), permitindo roteamento de tráfego, políticas de segurança e futuras implementações de *canary deployment*.
 
 ### C. Observabilidade e Persistência de Logs
-* **Logs Persistentes (Ray Offloader)::** Um componente crítico é o **Ray Log Offloader**. Ele garante que, mesmo após a finalização do Ray Cluster (que é efêmero após a conclusão do job), os logs de todos os workers e do head node sejam descarregados e persistidos em um armazenamento secundário (DuckDB/Minio). Isso é fundamental para o *debugging* e a auditoria de jobs de treinamento passados.
+* **Persistência de Logs de Treinamento:** Para persistencia dos logs, foi implantado sidecarts Fluentbit para capturar os logs e enviar ao Loki.
 * **Inference Metrics:** O KServe é integrado ao **Prometheus** para expor métricas de inferência cruciais (latência, taxa de erro HTTP, volume de requisições). Essas métricas são visualizadas no **Grafana**.
-* **Tabela de Inferência:** O *serving runtime* está configurado para registrar o *payload* completo de cada inferência (entradas, saídas, *timestamps* e ID do modelo) em uma "tabela de inferência" (geralmente um banco de dados analítico como o DuckDB com dados no Minio), servindo como uma fonte de dados para **análise de desvio de modelo (drift)** e **auditoria de decisões**.
+* **Logs de Inferência:** Logs detalhados de cada requisição de inferência (entrada, saída, timestamp) são armazenados , permitindo auditoria e análise detalhada do desempenho do modelo em produção.
 
 ## 4. Melhorias e Considerações Finais
 
