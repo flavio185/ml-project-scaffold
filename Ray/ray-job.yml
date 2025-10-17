@@ -27,6 +27,9 @@ spec:
       rayStartParams: {}
       #pod template
       template:
+        metadata:
+          annotations:
+            sidecar.istio.io/inject: "false"
         spec:
           containers:
           - name: ray-head
@@ -45,6 +48,9 @@ spec:
       maxReplicas: ${MAX_REPLICAS}
       rayStartParams: {}
       template:
+        metadata:
+          annotations:
+            sidecar.istio.io/inject: "false"
         spec:
           containers:
           - name: ray-worker

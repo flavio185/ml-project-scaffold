@@ -1,0 +1,23 @@
+apiVersion: "serving.kserve.io/v1beta1"
+kind: "InferenceService"
+metadata:
+  name: "ml-default-payment-mode"
+  namespace: app-ns
+spec:
+  predictor:
+    serviceAccountName: sa
+    model:
+      modelFormat:
+        name: sklearn
+      protocolVersion: v1
+      storageUri: "s3://mlflow-bucket/1/models/m-1a19006435f94d0188346270c1807b2e/artifacts"
+      resources:
+        requests:
+          cpu: "100m"
+          memory: "512Mi"
+        limits:
+          cpu: "1"
+          memory: "1Gi"
+  logger:
+    mode: all
+    url: http://message-dumper.default.svc.cluster.local

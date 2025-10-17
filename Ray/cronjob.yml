@@ -17,6 +17,9 @@ spec:
   jobTemplate:
     spec:
       template:
+        metadata:
+          annotations:
+            sidecar.istio.io/inject: "false"
         spec:
           # This service account needs permission to create RayJobs
           serviceAccountName: rayjob-creator-sa
