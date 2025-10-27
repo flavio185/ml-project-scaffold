@@ -10,7 +10,7 @@ spec:
       modelFormat:
         name: sklearn
       protocolVersion: v1
-      storageUri: "s3://mlflow-bucket/1/models/m-1a19006435f94d0188346270c1807b2e/artifacts"
+      storageUri: "s3://mlflow-bucket/1/models/m-915b48529243447ca05b055af4f05748/artifacts"
       resources:
         requests:
           cpu: "100m"
@@ -18,6 +18,6 @@ spec:
         limits:
           cpu: "1"
           memory: "1Gi"
-  logger:
-    mode: all
-    url: http://message-dumper.default.svc.cluster.local
+    logger:
+      mode: all
+      url: http://message-dumper.default.svc.cluster.local
