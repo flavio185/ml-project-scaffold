@@ -24,7 +24,8 @@ spec:
       # The `rayStartParams` are used to configure the `ray start` command.
       # See https://github.com/ray-project/kuberay/blob/master/docs/guidance/rayStartParams.md for the default settings of `rayStartParams` in KubeRay.
       # See https://docs.ray.io/en/latest/cluster/cli.html#ray-start for all available options in `rayStartParams`.
-      rayStartParams: {}
+      rayStartParams:
+        metrics-export-port: "8080"
       #pod template
       template:
         metadata:
@@ -34,6 +35,19 @@ spec:
           containers:
           - name: ray-head
             image: rayproject/ray:2.46.0
+            ports:
+            - containerPort: 6379
+              name: gcs-server
+              protocol: TCP
+            - containerPort: 8265
+              name: dashboard
+              protocol: TCP
+            - containerPort: 10001
+              name: client
+              protocol: TCP
+            - containerPort: 8080
+              name: metrics
+              protocol: TCP
             resources:
               limits:
                 cpu: "1"
@@ -42,11 +56,46 @@ spec:
             envFrom:
             - secretRef:
                 name: aws-credentials
+            volumeMounts:
+            - mountPath: /tmp/ray
+              name: ray-logs
+          # Fluent Bit sidecar — ships Ray logs to Loki
+          - name: fluentbit
+            image: fluent/fluent-bit:3.2.2
+            env:
+            - name: POD_LABELS
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.labels['ray.io/cluster']
+            - name: K8S_NAMESPACE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            resources:
+              requests:
+                cpu: 100m
+                memory: 128Mi
+              limits:
+                cpu: 100m
+                memory: 128Mi
+            volumeMounts:
+            - mountPath: /tmp/ray
+              name: ray-logs
+            - mountPath: /fluent-bit/etc/fluent-bit.conf
+              subPath: fluent-bit.conf
+              name: fluentbit-config
+          volumes:
+          - name: ray-logs
+            emptyDir: {}
+          - name: fluentbit-config
+            configMap:
+              name: fluentbit-config
     workerGroupSpecs:
     - groupName: workers
       minReplicas: ${MIN_REPLICAS}
       maxReplicas: ${MAX_REPLICAS}
-      rayStartParams: {}
+      rayStartParams:
+        metrics-export-port: "8080"
       template:
         metadata:
           annotations:
@@ -55,6 +104,10 @@ spec:
           containers:
           - name: ray-worker
             image: rayproject/ray:2.46.0
+            ports:
+            - containerPort: 8080
+              name: metrics
+              protocol: TCP
             resources:
               limits:
                 cpu: "1"
@@ -63,3 +116,37 @@ spec:
             envFrom:
             - secretRef:
                 name: aws-credentials
+            volumeMounts:
+            - mountPath: /tmp/ray
+              name: ray-logs
+          # Fluent Bit sidecar — ships Ray logs to Loki
+          - name: fluentbit
+            image: fluent/fluent-bit:3.2.2
+            env:
+            - name: POD_LABELS
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.labels['ray.io/cluster']
+            - name: K8S_NAMESPACE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            resources:
+              requests:
+                cpu: 100m
+                memory: 128Mi
+              limits:
+                cpu: 100m
+                memory: 128Mi
+            volumeMounts:
+            - mountPath: /tmp/ray
+              name: ray-logs
+            - mountPath: /fluent-bit/etc/fluent-bit.conf
+              subPath: fluent-bit.conf
+              name: fluentbit-config
+          volumes:
+          - name: ray-logs
+            emptyDir: {}
+          - name: fluentbit-config
+            configMap:
+              name: fluentbit-config
